@@ -1,0 +1,17 @@
+doctype html
+html
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1, shrink-to-fit=no")
+    block title
+    link(rel="icon", type="image/png", href="./images/favicon-32x32.png", sizes="32x32")
+    link(rel="icon", type="image/png", href=".../images/favicon-16x16.png", sizes="16x16")
+    link(rel="stylesheet", href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.3/css/bootstrap.min.css")
+
+
+  body
+    div(class="container")
+        block navbar
+        if error
+            div(class="alert alert-danger" role="alert") #{error}
+        block content
