@@ -1,9 +1,10 @@
 extends navbarlogin.pug
-block title
+block header
     title Login
-
+block heading
+ h2 Login
 block content
-        form(action="/" method="post")
+        form(action="/login" method="post")
             div(class="form-group")
                 label(for="inputUsername") Login
                 input(type="text", class="form-control", id="inputUsername", placeholder="Nutzername", name="username")

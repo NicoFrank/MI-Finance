@@ -1,0 +1,21 @@
+extends navbardepot.pug
+
+block header
+   title verkaufen
+
+block content
+        form(action="/sell" method="post")
+            div(class="form-group")
+                label(for="inputSymbol") Tickersymbol
+                select(class="form-control", id="TickerSymbol", placeholder="Tickersymbol", name="symbol")
+                   if tickerItems
+                      each tickerItem in tickerItems
+                           option #{tickerItem.symbol}
+                   else
+                      option Keine Aktien im Depot
+
+            div(class="form-group")
+                label(for="inputAnzahl") Anzahl
+                input(type="name", class="form-control", id="inputAnzahl" placeholder="Anzahl", name="shares")
+            div(class="form-group")
+                button(type="submit", class="btn btn-primary") Verkaufen
