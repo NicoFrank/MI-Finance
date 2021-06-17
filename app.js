@@ -1,16 +1,13 @@
 //python3 -m check50 --local mheckner/mi-check50/master/finance
 
-
-
 const express = require("express");
 const dotenv = require("dotenv");
 const helpers = require("./helpers");
 var bodyParser = require("body-parser");
 var pg = require("pg");
 var session = require("express-session");
-const bcrypt = require('bcrypt');
+const bcrypt = require("bcrypt");
 const saltRounds = 10;
-
 
 /* Reading global variables from config file */
 dotenv.config();
@@ -65,13 +62,13 @@ function initSession(session) {
   if (session.user == undefined) {
     session.user = ""
     session.userid = -1
-    session.loogedin = false
+    session.logedin = false
   } else {
     return false
   }
 }
 app.get("/quote", function(req, res) {
-  if (req.session.loogedin) res.render("quote");
+  if (req.session.logedin) res.render("quote");
   else {
     res.render("login", {
       error: "You need to be logged in to access this page."
@@ -97,7 +94,7 @@ app.post("/quote", urlencodedParser, async (req, res) => {
 });
 
 app.get("/buy", function(req, res) {
-  if (req.session.loogedin) res.render("buy");
+  if (req.session.logedin) res.render("buy");
   else {
     res.render("login", {
       error: "You need to be logged in to access this page."
@@ -107,31 +104,34 @@ app.get("/buy", function(req, res) {
 
 app.post("/buy", urlencodedParser, async (req, res) => {
   let symbol = req.body.symbol;
-  let count = Number(req.body.shares);
+  let count = req.body.shares;
   let user_id = req.session.userid;
+  console.log(req.body.symbol.length);
 
-  try {
+  if(symbol.lenght == 0 || count <= 0) {
+  res.status(400).render("buy", {
+    error: "ungültige Anzahl"
+  });
+}else{
+    try {
     let result = await helpers.lookup(symbol);
-    dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol='CASH'", [req.session.userid], function(dbError, dbResponse) {
+    dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol='CASH'", [user_id], function(dbError, dbResponse) {
       if (dbResponse.rows.length != 0) {
-        let cash = dbResponse.rows[0].total;
-        let latest_price = Number(result.latestPrice);
-        let cost = Math.round(latest_price * count*100)/100;
-        let new_cash = cash - cost;
+        let cash = parseFloat(dbResponse.rows[0].total);
+        let latest_price = result.latestPrice;
+        let cost = latest_price * count;
+        let new_cash = Math.round((cash - cost)*100)/100;
 
         if (cost > cash) {
           res.status(400).render("buy", {
             error: "Nicht genug Geld"
           });
-        } else if (count <= 0 || Number.isInteger(count) == false) {
-          res.status(400).render("buy", {
-            error: "ungültige Anzahl"
-          });
+
         } else {
           dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol=$2", [user_id, symbol], function(dbError, dbResponse) {
             if (dbResponse.rows.length != 0) {
-              let new_count = dbResponse.rows[0].count + count;
-              let new_total = cost + Number(dbResponse.rows[0].total); //dbResponse.row[0].total is a string?!
+              let new_count = parseFloat(dbResponse.rows[0].count) + count;
+              let new_total = cost + parseFloat(dbResponse.rows[0].total); //dbResponse.row[0].total is a string?!
               dbClient.query("UPDATE finance_overview SET count=$1, price=$2, total=$3 WHERE user_id=$4 AND symbol=$5", [new_count, latest_price, new_total, user_id, symbol]);
             } else {
               dbClient.query("INSERT INTO finance_overview (user_id, symbol, name, count, price, total) VALUES ($1, $2, $3, $4, $5, $6)", [user_id, symbol, result.companyName, count, latest_price, cost]);
@@ -150,30 +150,31 @@ app.post("/buy", urlencodedParser, async (req, res) => {
     console.log(err);
     res.status(400).send("Sorry, Fehler beim Abrufen des Aktienkurses.");
   }
+}
 });
 
 app.post("/sell", urlencodedParser, async (req, res) => {
   let symbol = req.body.symbol;
-  let count = Number(req.body.shares);
+  let count = req.body.shares;
   let user_id = req.session.userid;
   let tickerItems =[];
 
 
-  dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND count>0",[req.session.userid], function(dbError, dbResponse){
+  dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND count>0",[user_id], function(dbError, dbResponse){
     tickerItems = dbResponse.rows;
       });
 
   try {
     let result = await helpers.lookup(symbol);
 
-    dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol='CASH'", [req.session.userid], function(dbError, dbResponse) {
+    dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol='CASH'", [user_id], function(dbError, dbResponse) {
       if (dbResponse.rows.length != 0) {
         let cash = Number(dbResponse.rows[0].total);
         let latest_price = Math.round(Number(result.latestPrice)*100)/100;
         let cost = latest_price * count;
         let new_cash = cash + cost;
 
-        if (count <= 0 || Number.isInteger(count) == false) {
+        if (count <= 0) {
           res.status(400).render("sell", {
             error: "ungültige Anzahl",
             tickerItems: tickerItems
@@ -219,7 +220,7 @@ app.post("/sell", urlencodedParser, async (req, res) => {
   }
 });
 app.get("/", function(req, res) {
-  if (req.session.loogedin) {
+  if (req.session.logedin) {
       dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol=$2", [req.session.userid,'CASH'], function(dbError, dbResponse) {
        let cash = Number(dbResponse.rows[0].total);
        let total = cash;
@@ -267,7 +268,7 @@ app.post("/login", urlencodedParser, function(req, res) {
         if (result) {
           req.session.userid = dbResponse.rows[0].user_id;
           req.session.user = user;
-          req.session.loogedin = true;
+          req.session.logedin = true;
           console.log("login successful");
           res.redirect("/");
         } else {
@@ -312,7 +313,7 @@ app.post("/register", urlencodedParser, function(req, res) {
   });
 });
 app.get("/sell", function(req, res) {
-  if (req.session.loogedin) {
+  if (req.session.logedin) {
     dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND count>0",[req.session.userid], function(dbError, dbResponse){
       let tickerItems = dbResponse.rows;
       res.render("sell",{
@@ -327,7 +328,7 @@ app.get("/sell", function(req, res) {
   }
 });
 app.get("/history", function(req, res) {
-  if (req.session.loogedin) {
+  if (req.session.logedin) {
     dbClient.query("SELECT * FROM finance_transactions WHERE user_id=$1", [req.session.userid], function(dbError, dbResponse) {
       transactionItems = dbResponse.rows;
       res.render("history", {
@@ -341,7 +342,7 @@ app.get("/history", function(req, res) {
   }
 });
 app.get("/account", function(req, res) {
-  if (req.session.loogedin) {
+  if (req.session.logedin) {
     dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol='CASH'", [req.session.userid], function(dbError, dbResponse) {
       let total = dbResponse.rows[0].total;
       res.render("account", {
@@ -360,7 +361,7 @@ app.get("/logout", function(req, res) {
     console.log("Session destroyed.");
   })
   res.render("landing", {
-    logout: "You have been looged out"
+    logout: "You have been logged out"
   });
 });
 app.get("/register", function(req, res) {

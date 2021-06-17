@@ -1,9 +1,119 @@
-extends navbarlogin.pug
-
-block header
-     title Welcome
-
+extends navbarlogin2.pug
+block navbarcontent
+  
+      .container
+        .row
+          .col-md-7.col-sm-12
+            h2
+              |  comfortable,
+              br
+              |  easy trading
+              br
+              |  for free
+        .row.no-gutters
+          .col-md-7.col-sm-12
+            p.mt-4 Perfect to use from anywhere at any time.
+            p.mt-5
+              strong.text-uppercase Try for Free
+                a.tf-header-heading-btn.a.btn.btn-primary.btn-block.mt-1(href='#') Request Free Trial
 block content
-     if logout
-            div(class="alert alert-success") #{logout}
-     h2 Welcome to your online Broker
+
+
+  .page-content
+    div
+      .tf-work-section
+        #work.container
+          h2.h3 Features
+        .container
+          .row
+            .col-md-4.col-sm-12.pt-2
+              .card
+                img.img-fluid.card-img-top(src='http://localhost:3000/images/2-start-simple.jpg' alt='2-start-simple')
+                .card-body
+                  p.text-muted
+                    | We care about you. That is why every new customers gets 10.000$ for free.
+                  a.card-link(href='register') Register Here!
+            .col-md-4.col-sm-12.pt-2
+              .card
+                img.img-fluid.card-img-top(src='http://localhost:3000/images/3-start-simple.jpg' alt='3-start-simple')
+                .card-body
+                  p.text-muted
+                    | No Paperwork needed. We just need an Account name and a password.
+                  a.card-link(href='register') Try it out!
+            .col-md-4.col-sm-12.pt-2
+              .card
+                img.img-fluid.card-img-top(src='http://localhost:3000/images/4-start-simple.jpg' alt='4-start-simple')
+                .card-body
+                  p.text-muted
+                    | Easy to use. Want to buy stocks while on the toilet or in a boring meeting? We got you!
+      .tf-quotes-section
+        #tf-carousel.carousel.slide.mt-5(data-ride='carousel')
+          ol.carousel-indicators
+            li.active(data-target='#tf-carousel' data-slide-to='0')
+            li(data-target='#tf-carousel' data-slide-to='1')
+            li(data-target='#tf-carousel' data-slide-to='2')
+          .carousel-inner
+            .carousel-item.active(style="background-image: url('http://localhost:3000/images/5-start-simple-slider.jpg');")
+              .carousel-caption
+                p.slider-text-1
+                  | &quot;This is the best app ever made by any company
+                  br
+                  | i think in the world&quot;
+                p.slider-text-2
+                  | Donald Trump
+                  br
+                  | Former US President
+            .carousel-item(style="background-image: url('http://localhost:3000/images/6-start-simple-slider.jpg');")
+              .carousel-caption
+                p.slider-text-1
+                  | &quot;Even though the internet is new land to me
+                  br
+                  | I still was able to use it!&quot;
+                p.slider-text-2
+                  | Angela Merkel
+                  br
+                  | Chancelor of Germany
+            .carousel-item(style="background-image: url('http://localhost:3000/images/7-start-simple-slider.jpg');")
+              .carousel-caption
+                p.slider-text-1
+                  | &quot;Das ist eine sehr tolle Seite,
+                  br
+                  |  die du da gemacht hast!&quot;
+                p.slider-text-2
+                  | Ilona Frank
+                  br
+                  | My Mother
+          a.carousel-control-prev(href='#tf-carousel' role='button' data-slide='prev')
+            span.carousel-control-prev-icon(aria-hidden='true')
+            span.sr-only Previous
+          a.carousel-control-next(href='#tf-carousel' role='button' data-slide='next')
+            span.carousel-control-next-icon(aria-hidden='true')
+            span.sr-only Next
+          .tf-contact-section
+            #contact.container
+              h2.h4 Tell us About Your Requirement
+            .container
+              .row
+                .col-md-6.col-sm-12
+                  h3.h5 Contact us
+                  form(action='https://formspree.io/youremail@example.com' method='POST')
+                    .row.no-gutters
+                      .col-lg-6.col-md-12.col-sm-12.tf-contact-col
+                        input.bg-light.form-control(type='text' name='name' placeholder='*Name' required='required')
+                      .col-lg-6.col-md-12.col-sm-12.pb-2
+                        input.bg-light.form-control(type='email' name='_replyto' placeholder='*Your Email Address' required='required')
+                    .row.pb-2.no-gutters
+                      .col-md-12.col-sm-12
+                        textarea.bg-light.mb-2.form-control(name='message' placeholder='*Your Message' rows='5' required='required')
+                    button.btn.btn-primary(type='submit') Submit
+                .col-md-6.col-sm-12.float-right.text-right
+                  h3.h5 Address
+                  span
+                    | Start Simple
+                    br
+                    | United States
+                  p
+                  h3.h5 Phone
+                  p (243) 948 3866
+                  h3.h5 Email
+                  p contact@example.com
