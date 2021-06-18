@@ -1,19 +1,18 @@
-extends navbardepot.pug
+extends navbardepot2.pug
 
-block header
-   title verkaufen
+block navbarcontent
+      .row
+        .col-md-6.col-sm-12
+          h3.h5 Sell
+          form(action='/sell' method='post')
+            .row
+              .col-lg-8.col-md-12.col-sm-12.pb-2
+                select.bg-light.form-control(name='symbol')
+                    each tickerItem in tickerItems
+                         option #{tickerItem.symbol}
 
-block content
-        form(action="/sell" method="post")
-            div(class="form-group")
-                label(for="inputSymbol") Tickersymbol
-                select(class="form-control", id="TickerSymbol", placeholder="Tickersymbol", name="symbol")
-                      each tickerItem in tickerItems
-                           option #{tickerItem.symbol}
+            .row
+              .col-lg-8.col-md-12.col-sm-12.pb-2
+                input.bg-light.form-control(type='number' name='shares' placeholder='*Count' required='required')
 
-
-            div(class="form-group")
-                label(for="inputAnzahl") Anzahl
-                input(type="number", class="form-control", id="inputAnzahl" placeholder="Anzahl", name="shares")
-            div(class="form-group")
-                button(type="submit", class="btn btn-primary") Verkaufen
+            button.btn.btn-primary(type='submit') Sell

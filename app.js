@@ -361,7 +361,7 @@ app.get("/logout", function(req, res) {
     console.log("Session destroyed.");
   })
   res.render("landing", {
-    logout: "You have been logged out"
+    success: "You have been logged out"
   });
 });
 app.get("/register", function(req, res) {

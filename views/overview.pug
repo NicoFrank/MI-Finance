@@ -1,35 +1,33 @@
-extends navbardepot.pug
-
-block header
-   title MIFINANCE
-
+extends navbardepot2.pug
 block content
-    h2 Overview
-    table(class="table table-striped")
-       tr
-          th symbol
-          th companyName
-          th Anzahl
-          th Preis
-          th Gesamt
+    .container
+          h2.mt-5
+             strong.text-uppercase Overview
+          table(class="table table-striped")
+              tr
+                 th symbol
+                 th companyName
+                 th Anzahl
+                 th Preis
+                 th Gesamt
 
-       if overviewItems
-           each overviewItem in overviewItems
-                 tr
-                    td #{overviewItem.symbol}
-                    td #{overviewItem.name}
-                    td #{overviewItem.count}
-                    td #{overviewItem.price}
-                    td #{overviewItem.total}
-       tr
-          td CASH
-          td
-          td
-          td
-          td #{cash}
-       tr
-          td
-          td
-          td
-          td
-          td #{total}
+              if overviewItems
+                  each overviewItem in overviewItems
+                        tr
+                           td #{overviewItem.symbol}
+                           td #{overviewItem.name}
+                           td #{overviewItem.count}
+                           td #{overviewItem.price}
+                           td #{overviewItem.total}
+              tr
+                 td CASH
+                 td
+                 td
+                 td
+                 td #{cash}
+              tr
+                 td
+                 td
+                 td
+                 td
+                 td #{total}

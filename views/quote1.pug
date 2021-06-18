@@ -1,0 +1,17 @@
+extends navbardepot.pug
+block header
+    title kursabfrage
+
+block content
+
+     if result
+            h4 Eine #{name} (#{symbol}) Aktie kostet $#{result}.
+
+     else
+           h3 Tickersymbol
+
+           form(action="/quote" method="post")
+                   div(class="form-group")
+                       input(name="symbol" , type="symbol" , class="form-control" , id="inputsymbol" , placeholder="Tickersymbol")
+                   div(class="form-group")
+                       button(type="submit", class="btn btn-primary") kursabfrage

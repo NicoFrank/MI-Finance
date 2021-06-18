@@ -12,11 +12,30 @@ html
       link(rel='stylesheet' href='https://fonts.googleapis.com/css2?family=Oxygen:wght@300;400;700&display=swap')
     link(href='http://localhost:3000/css/bootstrap.min.css?ver=1.2.0' rel='stylesheet')
     link(href='http://localhost:3000/css/main.css?ver=1.2.0' rel='stylesheet')
-  body
 
-    block navbar
+    noscript
+      style.
+        .tf-header {
+        background: url('http://localhost:3000/images/1-hero-image.jpg') no-repeat center center;
+        }
+    header.tf-header(data-parallax='scroll' data-image-src='http://localhost:3000/images/1-hero-image.jpg')
+      nav.navbar.py-5.navbar-dark
+        .container
+          h1
+            a.navbar-brand(href='/') MI Finance
+          #navbar
+            ul.nav.pull-right
+                block navbaritems
+
+      .container
+              if success
+                  div(class="alert alert-success" role="alert") #{success}
+              if error
+                  div(class="alert alert-danger" role="alert") #{error}
+              block navbarcontent
 
     block content
+
     footer.bg-dark.py-4.mt-5.tf-footer
       .container.text-light
         .row

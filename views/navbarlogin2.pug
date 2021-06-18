@@ -1,31 +1,8 @@
 extends layout2.pug
-block navbar
-  noscript
-    style.
-      .tf-header {
-      background: url('http://localhost:3000/images/1-hero-image.jpg') no-repeat center center;
-      }
-  header.tf-header(data-parallax='scroll' data-image-src='http://localhost:3000/images/1-hero-image.jpg')
-    nav.navbar.py-5.navbar-dark
-      .container
-        h1
-          a.navbar-brand(href='/') MI Finance
-        #navbar
-          ul.nav.pull-right
-            li.nav-item
-              a.nav-link(href='/') Home
-            li.nav-item
-              a.nav-link(href='login') Login
-            li.nav-item
-              a.nav-link(href='register') Register
-
-
-    .container
-            block navbarcontent
-            if success
-                div(class="alert alert-success" role="alert") #{success}
-            if error
-                div(class="alert alert-danger" role="alert") #{error}
-
-
-block content
+block navbaritems
+    li.nav-item
+      a.nav-link(href='/') Home
+    li.nav-item
+      a.nav-link(href='login') Login
+    li.nav-item
+      a.nav-link(href='register') Register

@@ -1,15 +1,16 @@
-extends navbardepot.pug
+extends navbardepot2.pug
 
-block header
-   title Kaufen
+block navbarcontent
+      .row
+        .col-md-6.col-sm-12
+          h3.h5 Buy
+          form(action='/buy' method='post')
+            .row
+              .col-lg-8.col-md-12.col-sm-12.pb-2
+                input.bg-light.form-control(type='text' name='symbol' placeholder='*Tickersymbol' required='required')
 
-block content
-        form(action="/buy" method="post")
-            div(class="form-group")
-                label(for="inputSymbol") Tickersymbol
-                input(type="text", class="form-control", id="inputSymbol", placeholder="Tickersymbol", name="symbol")
-            div(class="form-group")
-                label(for="inputAnzahl") Anzahl
-                input(type="number", class="form-control", id="inputAnzahl" placeholder="Anzahl", name="shares")
-            div(class="form-group")
-                button(type="submit", class="btn btn-primary") Kaufen
+            .row
+              .col-lg-8.col-md-12.col-sm-12.pb-2
+                input.bg-light.form-control(type='number' name='shares' placeholder='*Count' required='required')
+
+            button.btn.btn-primary(type='submit') Buy

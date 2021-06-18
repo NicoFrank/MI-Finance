@@ -1,0 +1,21 @@
+extends navbardepot.pug
+
+block header
+   title History
+
+block content
+    h2 History
+    table(class="table table-striped")
+       tr
+          th symbol
+          th companyName
+          th Anzahl
+          th Preis
+          th Datum
+       each transactionItem in transactionItems
+             tr
+                td #{transactionItem.symbol}
+                td #{transactionItem.name}
+                td #{transactionItem.count}
+                td #{transactionItem.price}
+                td #{new Date(transactionItem.created_at).toISOString().slice(0, 10).replace('T', ' ')}
