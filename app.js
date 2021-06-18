@@ -104,10 +104,8 @@ app.get("/buy", function(req, res) {
 
 app.post("/buy", urlencodedParser, async (req, res) => {
   let symbol = req.body.symbol;
-  let count = req.body.shares;
+  let count = Number(req.body.shares);
   let user_id = req.session.userid;
-  console.log(req.body.symbol.length);
-
   if(symbol.lenght == 0 || count <= 0) {
   res.status(400).render("buy", {
     error: "ungültige Anzahl"
@@ -117,10 +115,10 @@ app.post("/buy", urlencodedParser, async (req, res) => {
     let result = await helpers.lookup(symbol);
     dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol='CASH'", [user_id], function(dbError, dbResponse) {
       if (dbResponse.rows.length != 0) {
-        let cash = parseFloat(dbResponse.rows[0].total);
-        let latest_price = result.latestPrice;
+        let cash = Number(dbResponse.rows[0].total);
+        let latest_price = result.latestPrice.toFixed(2);
         let cost = latest_price * count;
-        let new_cash = Math.round((cash - cost)*100)/100;
+        let new_cash = cash - cost;
 
         if (cost > cash) {
           res.status(400).render("buy", {
@@ -130,8 +128,8 @@ app.post("/buy", urlencodedParser, async (req, res) => {
         } else {
           dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol=$2", [user_id, symbol], function(dbError, dbResponse) {
             if (dbResponse.rows.length != 0) {
-              let new_count = parseFloat(dbResponse.rows[0].count) + count;
-              let new_total = cost + parseFloat(dbResponse.rows[0].total); //dbResponse.row[0].total is a string?!
+              let new_count = Number(dbResponse.rows[0].count) + count;
+              let new_total = cost + Number(dbResponse.rows[0].total); //dbResponse.row[0].total is a string?!
               dbClient.query("UPDATE finance_overview SET count=$1, price=$2, total=$3 WHERE user_id=$4 AND symbol=$5", [new_count, latest_price, new_total, user_id, symbol]);
             } else {
               dbClient.query("INSERT INTO finance_overview (user_id, symbol, name, count, price, total) VALUES ($1, $2, $3, $4, $5, $6)", [user_id, symbol, result.companyName, count, latest_price, cost]);
@@ -155,7 +153,7 @@ app.post("/buy", urlencodedParser, async (req, res) => {
 
 app.post("/sell", urlencodedParser, async (req, res) => {
   let symbol = req.body.symbol;
-  let count = req.body.shares;
+  let count = Number(req.body.shares);
   let user_id = req.session.userid;
   let tickerItems =[];
 
@@ -170,7 +168,8 @@ app.post("/sell", urlencodedParser, async (req, res) => {
     dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol='CASH'", [user_id], function(dbError, dbResponse) {
       if (dbResponse.rows.length != 0) {
         let cash = Number(dbResponse.rows[0].total);
-        let latest_price = Math.round(Number(result.latestPrice)*100)/100;
+        let latest_price = result.latestPrice.toFixed(2);
+        console.log("latestPrice: " +latest_price);
         let cost = latest_price * count;
         let new_cash = cash + cost;
 
@@ -189,14 +188,14 @@ app.post("/sell", urlencodedParser, async (req, res) => {
                 });
               } else {
                 let new_count = dbResponse.rows[0].count - count;
-                let new_total = Math.round((Number(dbResponse.rows[0].total) - cost)*100)/100;
+                let new_total = Number(dbResponse.rows[0].total) - cost;
                 if (new_count == 0) {
                   dbClient.query("DELETE FROM finance_overview WHERE user_id=$1 AND symbol= $2", [user_id, symbol]);
                 } else {
                   dbClient.query("UPDATE finance_overview SET count=$1, price=$2, total=$3 WHERE user_id=$4 AND symbol=$5", [new_count, latest_price,new_total, user_id, symbol]);
                 }
                 dbClient.query("INSERT INTO finance_transactions (user_id, symbol, name, count, price, created_at) VALUES ($1, $2, $3, $4, $5, $6)", [user_id, symbol, result.companyName, -count, latest_price, new Date().toISOString().slice(0, 19).replace('T', ' ')]);
-                dbClient.query("UPDATE finance_overview SET total=$1 WHERE user_id=$2 AND symbol=$3", [Math.round(new_cash * 100) / 100, user_id, 'CASH']);
+                dbClient.query("UPDATE finance_overview SET total=$1 WHERE user_id=$2 AND symbol=$3", [new_cash, user_id, 'CASH']);
 
                 res.render("sell", {
                   success: "verkauf erfolgreich",
