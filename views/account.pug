@@ -1,1 +1,14 @@
 extends navbardepot2.pug
+
+block navbarcontent
+    container
+      .row
+        .col-md-6.col-sm-12
+          h1
+            |  Settings
+      .row
+        .col-md-6.col-sm-12
+            a.h4(href = "/changepassword") -change password
+      .row
+        .col-md-6.col-sm-12
+          a.h4(href="/addmoney") -add money

@@ -1,19 +1,55 @@
 extends navbardepot2.pug
+
+block navbarcontent
+      if transactionItems
+            .container
+              .row
+                .col-md-7.col-sm-12
+                  h2
+                    |  All of your
+                    br
+                    |  stocks ever
+                    br
+                    |  bought or sold
+              .row.no-gutters
+                .col-md-7.col-sm-12
+                  p.mt-4 Loose Track?
+                  p.mt-5
+                    strong.text-uppercase Delte History
+                      form(action='/history' method='post')
+                         button.btn.btn-primary(type='submit') Delete
+
+      else
+          .container
+            .row
+              .col-md-7.col-sm-12
+                h2
+                  |  Your History
+                  br
+                  |  is empty
+                  br
+                  |
+            .row.no-gutters
+              .col-md-7.col-sm-12
+                p.mt-4 Start investing in your future!
+                    a.tf-header-heading-btn.a.btn.btn-primary.btn-block.mt-1(href='buy') Buy some stocks
+
 block content
-    .container
-          h2.mt-5
-             strong.text-uppercase History
-          table(class="table table-striped")
-             tr
-                th symbol
-                th companyName
-                th Anzahl
-                th Preis
-                th Datum
-             each transactionItem in transactionItems
+     if transactionItems
+          .container
+                h2.mt-5
+                   strong.text-uppercase History
+                table(class="table table-striped")
                    tr
-                      td #{transactionItem.symbol}
-                      td #{transactionItem.name}
-                      td #{transactionItem.count}
-                      td #{transactionItem.price}
-                      td #{new Date(transactionItem.created_at).toISOString().slice(0, 10).replace('T', ' ')}
+                      th symbol
+                      th companyName
+                      th Anzahl
+                      th Preis
+                      th Datum
+                   each transactionItem in transactionItems
+                         tr
+                            td #{transactionItem.symbol}
+                            td #{transactionItem.name}
+                            td #{transactionItem.count}
+                            td #{transactionItem.price}
+                            td #{new Date(transactionItem.created_at).toISOString().slice(0, 10).replace('T', ' ')}

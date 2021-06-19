@@ -67,6 +67,108 @@ function initSession(session) {
     return false
   }
 }
+
+
+
+app.get("/", function(req, res) {
+  let username = req.session.user;
+  if (req.session.logedin) {
+    dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol=$2", [req.session.userid, 'CASH'], function(dbError, dbResponse) {
+      let cash = Number(dbResponse.rows[0].total);
+      let total = cash;
+      dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol!= $2", [req.session.userid, 'CASH'], function(dbError, dbResponse) {
+        if (dbResponse.rows.length != 0) {
+          let overviewItems = dbResponse.rows;
+          for (let i = 0; i < overviewItems.length; i++) {
+            total += overviewItems[i].price * overviewItems[i].count;
+          }
+          res.render("overview", {
+            username: username,
+            overviewItems: overviewItems,
+            total: total,
+            cash: cash
+          });
+        } else {
+          res.render("overview", {
+            username: username,
+            total: total,
+            cash: cash
+          })
+        }
+      });
+    });
+  } else res.render("landing");
+});
+app.get("/login", function(req, res) {
+  initSession(req.session);
+  res.render("login");
+});
+
+app.post("/login", urlencodedParser, function(req, res) {
+  var user = req.body.username;
+  var password = req.body.password;
+
+  initSession(req.session);
+
+  dbClient.query("SELECT * FROM users WHERE username=$1", [user], function(dbError, dbResponse) {
+    if (dbResponse.rows.length == 0) {
+      res.status(400).render("login", {
+        error: "Oops. Bitte überprüfen Sie Nutzername und Passwort!"
+      });
+    } else {
+      let hash = dbResponse.rows[0].password;
+      bcrypt.compare(password, hash, function(err, result) {
+        if (result) {
+          req.session.userid = dbResponse.rows[0].user_id;
+          req.session.user = user;
+          req.session.logedin = true;
+          console.log("login successful");
+          res.redirect("/");
+        } else {
+          res.status(400).render("login", {
+            error: "Oops. Bitte überprüfen Sie Nutzername und Passwort!"
+          });
+        }
+      });
+    }
+  });
+});
+
+app.get("/register", function(req, res) {
+  res.render("register");
+});
+
+app.post("/register", urlencodedParser, function(req, res) {
+  var user = req.body.username;
+  var password = req.body.password;
+  var confirmation = req.body.confirmation;
+
+  dbClient.query("SELECT * FROM users WHERE username=$1", [user], function(dbError, dbResponse) {
+    if (dbResponse.rows.length != 0) {
+      res.status(400).render("register", {
+        error: "Benutzername bereits vergeben"
+      });
+    } else if (user == "" || password == "") {
+      res.status(400).render("register", {
+        error: "Eingabe darf nicht leer sein"
+      });
+    } else if (password != confirmation) {
+      res.status(400).render("register", {
+        error: "Passwörter stimmen nicht überein"
+      });
+    } else {
+      bcrypt.hash(password, saltRounds, function(err, hash) {
+        dbClient.query("INSERT INTO users(username, password) VALUES ($1, $2)", [user, hash], function(dbError, dbResponse) { //add user anad encrypted password in databank
+          dbClient.query("SELECT user_id FROM users WHERE username=$1", [user], function(dbError, dbResponse) { //get User id
+            let user_id = dbResponse.rows[0].user_id;
+            dbClient.query("INSERT INTO finance_overview(user_id, symbol, total) VALUES ($1, $2, $3)", [user_id, 'CASH', 10000.00]); //give
+            res.render("login");
+          });
+        });
+      });
+    }
+  });
+});
 app.get("/quote", function(req, res) {
   if (req.session.logedin) res.render("quote");
   else {
@@ -106,61 +208,76 @@ app.post("/buy", urlencodedParser, async (req, res) => {
   let symbol = req.body.symbol;
   let count = Number(req.body.shares);
   let user_id = req.session.userid;
-  if(symbol.lenght == 0 || count <= 0) {
-  res.status(400).render("buy", {
-    error: "ungültige Anzahl"
-  });
-}else{
-    try {
-    let result = await helpers.lookup(symbol);
-    dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol='CASH'", [user_id], function(dbError, dbResponse) {
-      if (dbResponse.rows.length != 0) {
-        let cash = Number(dbResponse.rows[0].total);
-        let latest_price = result.latestPrice.toFixed(2);
-        let cost = latest_price * count;
-        let new_cash = cash - cost;
-
-        if (cost > cash) {
-          res.status(400).render("buy", {
-            error: "Nicht genug Geld"
-          });
-
-        } else {
-          dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol=$2", [user_id, symbol], function(dbError, dbResponse) {
-            if (dbResponse.rows.length != 0) {
-              let new_count = Number(dbResponse.rows[0].count) + count;
-              let new_total = cost + Number(dbResponse.rows[0].total); //dbResponse.row[0].total is a string?!
-              dbClient.query("UPDATE finance_overview SET count=$1, price=$2, total=$3 WHERE user_id=$4 AND symbol=$5", [new_count, latest_price, new_total, user_id, symbol]);
-            } else {
-              dbClient.query("INSERT INTO finance_overview (user_id, symbol, name, count, price, total) VALUES ($1, $2, $3, $4, $5, $6)", [user_id, symbol, result.companyName, count, latest_price, cost]);
-        }
-            dbClient.query("INSERT INTO finance_transactions (user_id, symbol, name, count, price, created_at) VALUES ($1, $2, $3, $4, $5, $6)", [user_id, symbol, result.companyName, count, latest_price, (new Date()).toLocaleString("en-US")]);
-            dbClient.query("UPDATE finance_overview SET total =$1 WHERE user_id=$2 AND symbol=$3", [new_cash, user_id, 'CASH']);
-            res.render("buy", {
-              success: "Kauf erfolgreich"
-            });
-          });
-        }
-      }
+  if (symbol.lenght == 0 || count <= 0) {
+    res.status(400).render("buy", {
+      error: "ungültige Anzahl"
     });
-  } catch (err) {
-    console.log(helpers.API_KEY);
-    console.log(err);
-    res.status(400).send("Sorry, Fehler beim Abrufen des Aktienkurses.");
+  } else {
+    try {
+      let result = await helpers.lookup(symbol);
+      dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol='CASH'", [user_id], function(dbError, dbResponse) {
+        if (dbResponse.rows.length != 0) {
+          let cash = Number(dbResponse.rows[0].total);
+          let latest_price = result.latestPrice.toFixed(2);
+          let cost = latest_price * count;
+          let new_cash = cash - cost;
+
+          if (cost > cash) {
+            res.status(400).render("buy", {
+              error: "Nicht genug Geld"
+            });
+
+          } else {
+            dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol=$2", [user_id, symbol], function(dbError, dbResponse) {
+              if (dbResponse.rows.length != 0) {
+                let new_count = Number(dbResponse.rows[0].count) + count;
+                let new_total = cost + Number(dbResponse.rows[0].total); //dbResponse.row[0].total is a string?!
+                dbClient.query("UPDATE finance_overview SET count=$1, price=$2, total=$3 WHERE user_id=$4 AND symbol=$5", [new_count, latest_price, new_total, user_id, symbol]);
+              } else {
+                dbClient.query("INSERT INTO finance_overview (user_id, symbol, name, count, price, total) VALUES ($1, $2, $3, $4, $5, $6)", [user_id, symbol, result.companyName, count, latest_price, cost]);
+              }
+              dbClient.query("INSERT INTO finance_transactions (user_id, symbol, name, count, price, created_at) VALUES ($1, $2, $3, $4, $5, $6)", [user_id, symbol, result.companyName, count, latest_price, (new Date()).toLocaleString("en-US")]);
+              dbClient.query("UPDATE finance_overview SET total =$1 WHERE user_id=$2 AND symbol=$3", [new_cash, user_id, 'CASH']);
+              res.render("buy", {
+                success: "Kauf erfolgreich"
+              });
+            });
+          }
+        }
+      });
+    } catch (err) {
+      console.log(helpers.API_KEY);
+      console.log(err);
+      res.status(400).send("Sorry, Fehler beim Abrufen des Aktienkurses.");
+    }
   }
-}
 });
 
+app.get("/sell", function(req, res) {
+  if (req.session.logedin) {
+    dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND count>0", [req.session.userid], function(dbError, dbResponse) {
+      let tickerItems = dbResponse.rows;
+      res.render("sell", {
+        tickerItems: tickerItems
+      });
+    });
+
+  } else {
+    res.render("login", {
+      error: "You need to be logged in to access this page."
+    });
+  }
+});
 app.post("/sell", urlencodedParser, async (req, res) => {
   let symbol = req.body.symbol;
   let count = Number(req.body.shares);
   let user_id = req.session.userid;
-  let tickerItems =[];
+  let tickerItems = [];
 
 
-  dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND count>0",[user_id], function(dbError, dbResponse){
+  dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND count>0", [user_id], function(dbError, dbResponse) {
     tickerItems = dbResponse.rows;
-      });
+  });
 
   try {
     let result = await helpers.lookup(symbol);
@@ -169,7 +286,6 @@ app.post("/sell", urlencodedParser, async (req, res) => {
       if (dbResponse.rows.length != 0) {
         let cash = Number(dbResponse.rows[0].total);
         let latest_price = result.latestPrice.toFixed(2);
-        console.log("latestPrice: " +latest_price);
         let cost = latest_price * count;
         let new_cash = cash + cost;
 
@@ -192,7 +308,7 @@ app.post("/sell", urlencodedParser, async (req, res) => {
                 if (new_count == 0) {
                   dbClient.query("DELETE FROM finance_overview WHERE user_id=$1 AND symbol= $2", [user_id, symbol]);
                 } else {
-                  dbClient.query("UPDATE finance_overview SET count=$1, price=$2, total=$3 WHERE user_id=$4 AND symbol=$5", [new_count, latest_price,new_total, user_id, symbol]);
+                  dbClient.query("UPDATE finance_overview SET count=$1, price=$2, total=$3 WHERE user_id=$4 AND symbol=$5", [new_count, latest_price, new_total, user_id, symbol]);
                 }
                 dbClient.query("INSERT INTO finance_transactions (user_id, symbol, name, count, price, created_at) VALUES ($1, $2, $3, $4, $5, $6)", [user_id, symbol, result.companyName, -count, latest_price, new Date().toISOString().slice(0, 19).replace('T', ' ')]);
                 dbClient.query("UPDATE finance_overview SET total=$1 WHERE user_id=$2 AND symbol=$3", [new_cash, user_id, 'CASH']);
@@ -218,127 +334,32 @@ app.post("/sell", urlencodedParser, async (req, res) => {
     res.status(400).send("Sorry, Fehler beim Abrufen des Aktienkurses.");
   }
 });
-app.get("/", function(req, res) {
-  if (req.session.logedin) {
-      dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol=$2", [req.session.userid,'CASH'], function(dbError, dbResponse) {
-       let cash = Number(dbResponse.rows[0].total);
-       let total = cash;
-      dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol!= $2", [req.session.userid, 'CASH'], function(dbError, dbResponse) {
-        if(dbResponse.rows.length != 0){
-          let overviewItems = dbResponse.rows;
-            for (let i = 0; i < overviewItems.length; i++) {
-              total += overviewItems[i].price * overviewItems[i].count;
-            }
-            total = Math.round(total*100)/100;
-            res.render("overview", {
-              overviewItems: overviewItems,
-              total: total,
-              cash: cash
-            });
-          } else {
-            res.render("overview", {
-              total: total,
-              cash: cash
-            })
-          }
-        });
-    });
-  } else res.render("landing");
-});
-app.get("/login", function(req, res) {
-  initSession(req.session);
-  res.render("login");
-})
-
-app.post("/login", urlencodedParser, function(req, res) {
-  var user = req.body.username;
-  var password = req.body.password;
-
-  initSession(req.session);
-
-  dbClient.query("SELECT * FROM users WHERE username=$1", [user], function(dbError, dbResponse) {
-    if (dbResponse.rows.length == 0) {
-      res.status(400).render("login", {
-        error: "Oops. Bitte überprüfen Sie Nutzername und Passwort!"
-      });
-    } else {
-      let hash = dbResponse.rows[0].password;
-      bcrypt.compare(password, hash, function(err, result) {
-        if (result) {
-          req.session.userid = dbResponse.rows[0].user_id;
-          req.session.user = user;
-          req.session.logedin = true;
-          console.log("login successful");
-          res.redirect("/");
-        } else {
-          res.status(400).render("login", {
-            error: "Oops. Bitte überprüfen Sie Nutzername und Passwort!"
-          });
-        }
-      });
-    }
-  });
-});
-
-app.post("/register", urlencodedParser, function(req, res) {
-  var user = req.body.username;
-  var password = req.body.password;
-  var confirmation = req.body.confirmation;
-
-  dbClient.query("SELECT * FROM users WHERE username=$1", [user], function(dbError, dbResponse) {
-    if (dbResponse.rows.length != 0) {
-      res.status(400).render("register", {
-        error: "Benutzername bereits vergeben"
-      });
-    } else if (user == "" || password == "") {
-      res.status(400).render("register", {
-        error: "Eingabe darf nicht leer sein"
-      });
-    } else if (password != confirmation) {
-      res.status(400).render("register", {
-        error: "Passwörter stimmen nicht überein"
-      });
-    } else {
-      bcrypt.hash(password, saltRounds, function(err, hash) {
-        dbClient.query("INSERT INTO users(username, password) VALUES ($1, $2)", [user, hash], function(dbError, dbResponse) { //add user anad encrypted password in databank
-          dbClient.query("SELECT user_id FROM users WHERE username=$1", [user], function(dbError, dbResponse) { //get User id
-            let user_id = dbResponse.rows[0].user_id;
-            dbClient.query("INSERT INTO finance_overview(user_id, symbol, total) VALUES ($1, $2, $3)", [user_id, 'CASH', 10000.00]); //give
-            res.render("login");
-          });
-        });
-      });
-    }
-  });
-});
-app.get("/sell", function(req, res) {
-  if (req.session.logedin) {
-    dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND count>0",[req.session.userid], function(dbError, dbResponse){
-      let tickerItems = dbResponse.rows;
-      res.render("sell",{
-        tickerItems: tickerItems
-      });
-    });
-
-  } else {
-    res.render("login", {
-      error: "You need to be logged in to access this page."
-    });
-  }
-});
 app.get("/history", function(req, res) {
   if (req.session.logedin) {
     dbClient.query("SELECT * FROM finance_transactions WHERE user_id=$1", [req.session.userid], function(dbError, dbResponse) {
-      transactionItems = dbResponse.rows;
-      res.render("history", {
-        transactionItems: transactionItems
-      });
+      let transactionItems = dbResponse.rows;
+      if (transactionItems.length != 0) {
+        res.render("history", {
+          transactionItems: transactionItems
+        });
+      } else {
+
+        res.render("history");
+      }
     });
   } else {
     res.render("login", {
-      error: "You need to be logged in to access this page."
+      error: "You need to be logedin to access this page."
     });
   }
+});
+app.post("/history", urlencodedParser, function(req, res) {
+  let user_id = req.session.userid;
+  dbClient.query("DELETE FROM finance_transactions WHERE user_id = $1", [user_id], function(dbError, dbResponse) {
+    res.render("history", {
+      success: "History has been cleared"
+    });
+  });
 });
 app.get("/account", function(req, res) {
   if (req.session.logedin) {
@@ -355,17 +376,78 @@ app.get("/account", function(req, res) {
     });
   }
 });
+app.get("/changepassword", function(req, res) {
+  if (req.session.logedin) {
+    res.render("changepassword");
+  } else {
+    res.render("login", {
+      error: "You need to be logged in to access this page."
+    });
+  }
+});
+app.post("/changepassword", urlencodedParser, function(req, res) {
+  let newpassword = req.body.password;
+  let confirmation = req.body.confirmation;
+  let user_id = req.session.userid;
+  console.log("userid: " + user_id);
+  if (confirmation != newpassword) {
+    res.render("account", {
+      error: "passwords do not match"
+    });
+  }
+  dbClient.query("SELECT * FROM users WHERE user_id=$1", [user_id], function(dbError, dbResponse) {
+
+    let hash = dbResponse.rows[0].password;
+    bcrypt.compare(newpassword, hash, function(err, result) {
+      if (!result) {
+        bcrypt.hash(newpassword, saltRounds, function(err, hash) {
+          dbClient.query("UPDATE users SET password = $1 WHERE user_id = $2", [hash, user_id], function(dbError, dbResponse) {
+            res.render("account", {
+              success: "password has been changed"
+            });
+          });
+        });
+
+      } else {
+        res.status(400).render("account", {
+          error: "New password can't be old password"
+        });
+      }
+    });
+  });
+});
+app.get("/addmoney", function(req, res) {
+  if (req.session.logedin) {
+    res.render("addmoney");
+  } else {
+    res.render("login", {
+      error: "You need to be logged in to access this page."
+    });
+  }
+});
+app.post("/addmoney", urlencodedParser, function(req, res) {
+  let user_id = req.session.userid;
+  let addmoney = req.body.money;
+  dbClient.query("SELECT * FROM finance_overview WHERE user_id = $1 AND symbol='CASH'", [user_id], function(dbError, dbResponse) {
+    let oldmoney = Number(dbResponse.rows[0].total);
+    let newmoney = oldmoney + addmoney;
+    dbClient.query("UPDATE finance_overview SET total = $1 WHERE user_id = $2 AND symbol = 'CASH'", [newmoney, user_id], function(dbError, dbResponse) {
+      res.render("account", {
+        success: "Money has been added"
+      });
+    });
+  });
+});
+
 app.get("/logout", function(req, res) {
   req.session.destroy(function(err) {
     console.log("Session destroyed.");
-  })
+  });
   res.render("landing", {
     success: "You have been logged out"
   });
 });
-app.get("/register", function(req, res) {
-  res.render("register");
-});
+
 
 app.listen(PORT, function() {
   console.log(`MI Finance running and listening on port ${PORT}`);

@@ -1,4 +1,21 @@
 extends navbardepot2.pug
+block navbarcontent
+  .container
+    .row
+      .col-md-7.col-sm-12
+        h2
+          |  Hello
+          br
+          |  #{username}
+          br
+          |  Welcome Back
+    .row.no-gutters
+      .col-md-7.col-sm-12
+        p.mt-5
+          strong.text-uppercase Time for Trading
+          a.tf-header-heading-btn.a.btn.btn-primary.btn-block.mt-1(href='buy') buy stocks
+      .col-md-7.col-sm-12
+            a.tf-header-heading-btn.a.btn.btn-primary.btn-block.mt-1(href='sell') sell stocks
 block content
     .container
           h2.mt-5

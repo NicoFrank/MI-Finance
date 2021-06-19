@@ -1,0 +1,13 @@
+extends navbardepot2.pug
+
+block navbarcontent
+    container
+    .row
+      .col-md-6.col-sm-12
+        h3.h5.mt-4 Add money
+        form(action='/addmoney' method='post')
+          .row
+            .col-lg-8.col-md-12.col-sm-12.pb-2
+              input.bg-light.form-control(type='number' name='money' placeholder='*Price' required='required')
+
+          button.btn.btn-primary(type='submit') ADD
