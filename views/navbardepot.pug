@@ -1,19 +1,16 @@
 extends layout.pug
-block navbar
-    nav(class="navbar navbar-expand navbar-light bg-light")
-            div(class="collapse navbar-collapse")
-              ul(class="navbar-nav mr-auto")
-                  li(class="nav-item")
-                      a(class="nav-link" href="/") MIFINANCE
-                  li(class="nav-item")
-                      a(class="nav-link" href="/quote") kursabfrage
-                  li(class="nav-item")
-                      a(class="nav-link" href="/buy") Kaufen
-                  li(class="nav-item")
-                      a(class="nav-link" href="/sell") Verkaufen
-                  li(class="nav-item")
-                      a(class="nav-link" href="/history") History
-                  li(class="nav-item")
-                      a(class="nav-link" href="/account") Account
-                  li(class="nav-item")
-                      a(class="nav-link" href="/logout") Logout
+block navbaritems
+    li.nav-item
+      a.nav-link(href='/') Home
+    li.nav-item
+      a.nav-link(href='quote') quotes
+    li.nav-item
+      a.nav-link(href='buy') Buy
+    li.nav-item
+      a.nav-link(href='sell') Sell
+    li.nav-item
+      a.nav-link(href='history') History
+    li.nav-item
+      a.nav-link(href='account') Account
+    li.nav-item
+      a.nav-link(href='logout') Logout

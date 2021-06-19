@@ -1,10 +1,8 @@
 extends layout.pug
-block navbar
-      nav(class="navbar navbar-expand navbar-light bg-light")
-              div(class="collapse navbar-collapse")
-                ul(class="navbar-nav mr-auto")
-                    li(class="nav-item")
-                        a(class="nav-link" href="/login") Login
-                    li(class="nav-item")
-                        a(class="nav-link" href="/register") Register
-      block heading
+block navbaritems
+    li.nav-item
+      a.nav-link(href='/') Home
+    li.nav-item
+      a.nav-link(href='login') Login
+    li.nav-item
+      a.nav-link(href='register') Register
