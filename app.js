@@ -82,6 +82,7 @@ app.get("/", function(req, res) {
           for (let i = 0; i < overviewItems.length; i++) {
             total += overviewItems[i].price * overviewItems[i].count;
           }
+          total= total.toFixed(2);
           res.render("overview", {
             username: username,
             overviewItems: overviewItems,
@@ -126,7 +127,7 @@ app.post("/login", urlencodedParser, function(req, res) {
           res.redirect("/");
         } else {
           res.status(400).render("login", {
-            error: "Oops. Bitte überprüfen Sie Nutzername und Passwort!"
+            error: "username and password do not match"
           });
         }
       });
@@ -146,15 +147,15 @@ app.post("/register", urlencodedParser, function(req, res) {
   dbClient.query("SELECT * FROM users WHERE username=$1", [user], function(dbError, dbResponse) {
     if (dbResponse.rows.length != 0) {
       res.status(400).render("register", {
-        error: "Benutzername bereits vergeben"
+        error: "username taken"
       });
     } else if (user == "" || password == "") {
       res.status(400).render("register", {
-        error: "Eingabe darf nicht leer sein"
+        error: "input cannot be empty"
       });
     } else if (password != confirmation) {
       res.status(400).render("register", {
-        error: "Passwörter stimmen nicht überein"
+        error: "passwords do not match"
       });
     } else {
       bcrypt.hash(password, saltRounds, function(err, hash) {
@@ -190,7 +191,7 @@ app.post("/quote", urlencodedParser, async (req, res) => {
 
   } catch (err) {
     res.status(400).render("quote", {
-      error: "ungültiges Tickersymbol"
+      error: "invalid symbol"
     });
   }
 });
@@ -210,7 +211,7 @@ app.post("/buy", urlencodedParser, async (req, res) => {
   let user_id = req.session.userid;
   if (symbol.lenght == 0 || count <= 0) {
     res.status(400).render("buy", {
-      error: "ungültige Anzahl"
+      error: "invalid count"
     });
   } else {
     try {
@@ -218,20 +219,21 @@ app.post("/buy", urlencodedParser, async (req, res) => {
       dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol='CASH'", [user_id], function(dbError, dbResponse) {
         if (dbResponse.rows.length != 0) {
           let cash = Number(dbResponse.rows[0].total);
-          let latest_price = result.latestPrice.toFixed(2);
+          let latest_price = Number(result.latestPrice);
           let cost = latest_price * count;
-          let new_cash = cash - cost;
+          let new_cash = (cash - cost).toFixed(2);
+
 
           if (cost > cash) {
             res.status(400).render("buy", {
-              error: "Nicht genug Geld"
+              error: "not enough money"
             });
 
           } else {
             dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol=$2", [user_id, symbol], function(dbError, dbResponse) {
               if (dbResponse.rows.length != 0) {
                 let new_count = Number(dbResponse.rows[0].count) + count;
-                let new_total = cost + Number(dbResponse.rows[0].total); //dbResponse.row[0].total is a string?!
+                let new_total = (cost + Number(dbResponse.rows[0].total)).toFixed(2);
                 dbClient.query("UPDATE finance_overview SET count=$1, price=$2, total=$3 WHERE user_id=$4 AND symbol=$5", [new_count, latest_price, new_total, user_id, symbol]);
               } else {
                 dbClient.query("INSERT INTO finance_overview (user_id, symbol, name, count, price, total) VALUES ($1, $2, $3, $4, $5, $6)", [user_id, symbol, result.companyName, count, latest_price, cost]);
@@ -239,16 +241,18 @@ app.post("/buy", urlencodedParser, async (req, res) => {
               dbClient.query("INSERT INTO finance_transactions (user_id, symbol, name, count, price, created_at) VALUES ($1, $2, $3, $4, $5, $6)", [user_id, symbol, result.companyName, count, latest_price, (new Date()).toLocaleString("en-US")]);
               dbClient.query("UPDATE finance_overview SET total =$1 WHERE user_id=$2 AND symbol=$3", [new_cash, user_id, 'CASH']);
               res.render("buy", {
-                success: "Kauf erfolgreich"
+                success: "buy successful"
               });
             });
           }
         }
       });
     } catch (err) {
-      console.log(helpers.API_KEY);
-      console.log(err);
-      res.status(400).send("Sorry, Fehler beim Abrufen des Aktienkurses.");
+      //console.log(helpers.API_KEY);
+      //console.log(err);
+      res.status(400).render("buy", {
+        error: "invalid symbol"
+      });
     }
   }
 });
@@ -285,13 +289,14 @@ app.post("/sell", urlencodedParser, async (req, res) => {
     dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol='CASH'", [user_id], function(dbError, dbResponse) {
       if (dbResponse.rows.length != 0) {
         let cash = Number(dbResponse.rows[0].total);
-        let latest_price = result.latestPrice.toFixed(2);
-        let cost = latest_price * count;
-        let new_cash = cash + cost;
+        let latest_price = Number(result.latestPrice);
+        let cost = Number(latest_price * count);
+        let new_cash = (cash + cost).toFixed(2);
+
 
         if (count <= 0) {
           res.status(400).render("sell", {
-            error: "ungültige Anzahl",
+            error: "invalid number",
             tickerItems: tickerItems
           });
         } else {
@@ -299,12 +304,12 @@ app.post("/sell", urlencodedParser, async (req, res) => {
             if (dbResponse.rows.length != 0) {
               if (count > dbResponse.rows[0].count) {
                 res.status(400).render("sell", {
-                  error: "nicht genügend Aktien vorhanden",
+                  error: "not enough shares",
                   tickerItems: tickerItems
                 });
               } else {
-                let new_count = dbResponse.rows[0].count - count;
-                let new_total = Number(dbResponse.rows[0].total) - cost;
+                let new_count = Number(dbResponse.rows[0].count) - count;
+                let new_total = (Number(dbResponse.rows[0].total) - cost).toFixed(2);
                 if (new_count == 0) {
                   dbClient.query("DELETE FROM finance_overview WHERE user_id=$1 AND symbol= $2", [user_id, symbol]);
                 } else {
@@ -314,13 +319,13 @@ app.post("/sell", urlencodedParser, async (req, res) => {
                 dbClient.query("UPDATE finance_overview SET total=$1 WHERE user_id=$2 AND symbol=$3", [new_cash, user_id, 'CASH']);
 
                 res.render("sell", {
-                  success: "verkauf erfolgreich",
+                  success: "sale successful",
                   tickerItems: tickerItems
                 });
               }
             } else {
               res.status(400).render("sell", {
-                error: "Aktie nicht im Depot",
+                error: "error in sale",
                 tickerItems: tickerItems
               });
             }
@@ -331,7 +336,9 @@ app.post("/sell", urlencodedParser, async (req, res) => {
   } catch (err) {
     console.log(helpers.API_KEY);
     console.log(err);
-    res.status(400).send("Sorry, Fehler beim Abrufen des Aktienkurses.");
+    res.status(400).render("sell", {
+      error: "error in sale"
+    });
   }
 });
 app.get("/history", function(req, res) {
@@ -427,7 +434,12 @@ app.get("/addmoney", function(req, res) {
 });
 app.post("/addmoney", urlencodedParser, function(req, res) {
   let user_id = req.session.userid;
-  let addmoney = req.body.money;
+  let addmoney = Number(req.body.money);
+  if(addmoney<=0){
+    res.status(400).render("addmoney", {
+      error: "invalid input"
+    });
+  } else {
   dbClient.query("SELECT * FROM finance_overview WHERE user_id = $1 AND symbol='CASH'", [user_id], function(dbError, dbResponse) {
     let oldmoney = Number(dbResponse.rows[0].total);
     let newmoney = oldmoney + addmoney;
@@ -437,6 +449,7 @@ app.post("/addmoney", urlencodedParser, function(req, res) {
       });
     });
   });
+}
 });
 
 app.get("/logout", function(req, res) {

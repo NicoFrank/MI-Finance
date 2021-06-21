@@ -1,19 +1,19 @@
 extends navbardepot.pug
 
 block title
-    title Overview
+    title Check Price
 block navbarcontent
       .row
 
           if result
             .col-md-12.col-sm-12
-                   h2.h5 Eine #{name} (#{symbol}) Aktie kostet $#{result}
+                   h2.h5 One #{name} (#{symbol}) share costs $#{result}
           else
             .col-md-6.col-sm-12
                 h3.h5 Buy
                 form(action='/quote' method='post')
                   .row
                     .col-lg-8.col-md-12.col-sm-12.pb-2
-                      input.bg-light.form-control(type='symbol' name='symbol' placeholder='*Tickersymbol' required='required')
+                      input.bg-light.form-control(type='symbol' name='symbol' placeholder='*Symbol' required='required')
 
                   button.btn.btn-primary(type='submit') Check Price

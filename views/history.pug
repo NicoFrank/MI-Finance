@@ -15,11 +15,10 @@ block navbarcontent
                     |  bought or sold
               .row.no-gutters
                 .col-md-7.col-sm-12
-                  p.mt-4 Loose Track?
                   p.mt-5
-                    strong.text-uppercase Delte History
+                    strong.text-uppercase Loose Track?
                       form(action='/history' method='post')
-                         button.btn.btn-primary(type='submit') Delete
+                         button.btn.btn-primary(type='submit') Clear History
 
       else
           .container
@@ -43,11 +42,11 @@ block content
                    strong.text-uppercase History
                 table(class="table table-striped")
                    tr
-                      th symbol
-                      th companyName
-                      th Anzahl
-                      th Preis
-                      th Datum
+                      th Symbol
+                      th Company Name
+                      th Count
+                      th Price
+                      th Date
                    each transactionItem in transactionItems
                          tr
                             td #{transactionItem.symbol}
