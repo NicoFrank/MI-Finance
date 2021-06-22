@@ -82,7 +82,7 @@ app.get("/", function(req, res) {
           for (let i = 0; i < overviewItems.length; i++) {
             total += overviewItems[i].price * overviewItems[i].count;
           }
-          total= total.toFixed(2);
+          total = total.toFixed(2);
           res.render("overview", {
             username: username,
             overviewItems: overviewItems,
@@ -211,7 +211,7 @@ app.post("/buy", urlencodedParser, async (req, res) => {
   let user_id = req.session.userid;
   if (symbol.lenght == 0 || count <= 0) {
     res.status(400).render("buy", {
-      error: "invalid count"
+      error: "invalid input"
     });
   } else {
     try {
@@ -282,63 +282,68 @@ app.post("/sell", urlencodedParser, async (req, res) => {
   dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND count>0", [user_id], function(dbError, dbResponse) {
     tickerItems = dbResponse.rows;
   });
+  if (symbol == undefined) {
+    res.status(400).render("sell", {
+      error: "no share selected"
+    });
+  } else {
+    try {
+      let result = await helpers.lookup(symbol);
 
-  try {
-    let result = await helpers.lookup(symbol);
-
-    dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol='CASH'", [user_id], function(dbError, dbResponse) {
-      if (dbResponse.rows.length != 0) {
-        let cash = Number(dbResponse.rows[0].total);
-        let latest_price = Number(result.latestPrice);
-        let cost = Number(latest_price * count);
-        let new_cash = (cash + cost).toFixed(2);
+      dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol='CASH'", [user_id], function(dbError, dbResponse) {
+        if (dbResponse.rows.length != 0) {
+          let cash = Number(dbResponse.rows[0].total);
+          let latest_price = Number(result.latestPrice);
+          let cost = Number(latest_price * count);
+          let new_cash = (cash + cost).toFixed(2);
 
 
-        if (count <= 0) {
-          res.status(400).render("sell", {
-            error: "invalid number",
-            tickerItems: tickerItems
-          });
-        } else {
-          dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol=$2", [user_id, symbol], function(dbError, dbResponse) {
-            if (dbResponse.rows.length != 0) {
-              if (count > dbResponse.rows[0].count) {
-                res.status(400).render("sell", {
-                  error: "not enough shares",
-                  tickerItems: tickerItems
-                });
-              } else {
-                let new_count = Number(dbResponse.rows[0].count) - count;
-                let new_total = (Number(dbResponse.rows[0].total) - cost).toFixed(2);
-                if (new_count == 0) {
-                  dbClient.query("DELETE FROM finance_overview WHERE user_id=$1 AND symbol= $2", [user_id, symbol]);
+          if (count <= 0) {
+            res.status(400).render("sell", {
+              error: "invalid input",
+              tickerItems: tickerItems
+            });
+          } else {
+            dbClient.query("SELECT * FROM finance_overview WHERE user_id=$1 AND symbol=$2", [user_id, symbol], function(dbError, dbResponse) {
+              if (dbResponse.rows.length != 0) {
+                if (count > dbResponse.rows[0].count) {
+                  res.status(400).render("sell", {
+                    error: "not enough shares",
+                    tickerItems: tickerItems
+                  });
                 } else {
-                  dbClient.query("UPDATE finance_overview SET count=$1, price=$2, total=$3 WHERE user_id=$4 AND symbol=$5", [new_count, latest_price, new_total, user_id, symbol]);
-                }
-                dbClient.query("INSERT INTO finance_transactions (user_id, symbol, name, count, price, created_at) VALUES ($1, $2, $3, $4, $5, $6)", [user_id, symbol, result.companyName, -count, latest_price, new Date().toISOString().slice(0, 19).replace('T', ' ')]);
-                dbClient.query("UPDATE finance_overview SET total=$1 WHERE user_id=$2 AND symbol=$3", [new_cash, user_id, 'CASH']);
+                  let new_count = Number(dbResponse.rows[0].count) - count;
+                  let new_total = (Number(dbResponse.rows[0].total) - cost).toFixed(2);
+                  if (new_count == 0) {
+                    dbClient.query("DELETE FROM finance_overview WHERE user_id=$1 AND symbol= $2", [user_id, symbol]);
+                  } else {
+                    dbClient.query("UPDATE finance_overview SET count=$1, price=$2, total=$3 WHERE user_id=$4 AND symbol=$5", [new_count, latest_price, new_total, user_id, symbol]);
+                  }
+                  dbClient.query("INSERT INTO finance_transactions (user_id, symbol, name, count, price, created_at) VALUES ($1, $2, $3, $4, $5, $6)", [user_id, symbol, result.companyName, -count, latest_price, new Date().toISOString().slice(0, 19).replace('T', ' ')]);
+                  dbClient.query("UPDATE finance_overview SET total=$1 WHERE user_id=$2 AND symbol=$3", [new_cash, user_id, 'CASH']);
 
-                res.render("sell", {
-                  success: "sale successful",
+                  res.render("sell", {
+                    success: "sale successful",
+                    tickerItems: tickerItems
+                  });
+                }
+              } else {
+                res.status(400).render("sell", {
+                  error: "error in sale",
                   tickerItems: tickerItems
                 });
               }
-            } else {
-              res.status(400).render("sell", {
-                error: "error in sale",
-                tickerItems: tickerItems
-              });
-            }
-          });
+            });
+          }
         }
-      }
-    });
-  } catch (err) {
-    console.log(helpers.API_KEY);
-    console.log(err);
-    res.status(400).render("sell", {
-      error: "error in sale"
-    });
+      });
+    } catch (err) {
+      console.log(helpers.API_KEY);
+      console.log(err);
+      res.status(400).render("sell", {
+        error: "error in sale"
+      });
+    }
   }
 });
 app.get("/history", function(req, res) {
@@ -396,12 +401,11 @@ app.post("/changepassword", urlencodedParser, function(req, res) {
   let newpassword = req.body.password;
   let confirmation = req.body.confirmation;
   let user_id = req.session.userid;
-  console.log("userid: " + user_id);
   if (confirmation != newpassword) {
-    res.render("account", {
+    res.render("changepassword", {
       error: "passwords do not match"
     });
-  }
+  } else {
   dbClient.query("SELECT * FROM users WHERE user_id=$1", [user_id], function(dbError, dbResponse) {
 
     let hash = dbResponse.rows[0].password;
@@ -416,12 +420,13 @@ app.post("/changepassword", urlencodedParser, function(req, res) {
         });
 
       } else {
-        res.status(400).render("account", {
+        res.status(400).render("changepassword", {
           error: "New password can't be old password"
         });
       }
     });
   });
+}
 });
 app.get("/addmoney", function(req, res) {
   if (req.session.logedin) {
@@ -435,21 +440,21 @@ app.get("/addmoney", function(req, res) {
 app.post("/addmoney", urlencodedParser, function(req, res) {
   let user_id = req.session.userid;
   let addmoney = Number(req.body.money);
-  if(addmoney<=0){
+  if (addmoney <= 0) {
     res.status(400).render("addmoney", {
       error: "invalid input"
     });
   } else {
-  dbClient.query("SELECT * FROM finance_overview WHERE user_id = $1 AND symbol='CASH'", [user_id], function(dbError, dbResponse) {
-    let oldmoney = Number(dbResponse.rows[0].total);
-    let newmoney = oldmoney + addmoney;
-    dbClient.query("UPDATE finance_overview SET total = $1 WHERE user_id = $2 AND symbol = 'CASH'", [newmoney, user_id], function(dbError, dbResponse) {
-      res.render("account", {
-        success: "Money has been added"
+    dbClient.query("SELECT * FROM finance_overview WHERE user_id = $1 AND symbol='CASH'", [user_id], function(dbError, dbResponse) {
+      let oldmoney = Number(dbResponse.rows[0].total);
+      let newmoney = oldmoney + addmoney;
+      dbClient.query("UPDATE finance_overview SET total = $1 WHERE user_id = $2 AND symbol = 'CASH'", [newmoney, user_id], function(dbError, dbResponse) {
+        res.render("account", {
+          success: "Money has been added"
+        });
       });
     });
-  });
-}
+  }
 });
 
 app.get("/logout", function(req, res) {

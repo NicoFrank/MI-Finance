@@ -9,8 +9,9 @@ block navbarcontent
             .row
               .col-lg-8.col-md-12.col-sm-12.pb-2
                 select.bg-light.form-control(name='symbol')
-                    each tickerItem in tickerItems
-                         option #{tickerItem.symbol}
+                    if tickerItems
+                        each tickerItem in tickerItems
+                             option #{tickerItem.symbol}
 
             .row
               .col-lg-8.col-md-12.col-sm-12.pb-2
