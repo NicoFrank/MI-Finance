@@ -461,7 +461,7 @@ app.get("/logout", function(req, res) {
   req.session.destroy(function(err) {
     console.log("Session destroyed.");
   });
-  res.render("landing", {
+  res.render("login", {
     success: "You have been logged out"
   });
 });
